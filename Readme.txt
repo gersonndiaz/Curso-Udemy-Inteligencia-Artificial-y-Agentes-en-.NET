@@ -1,6 +1,8 @@
 ========================================================================
 CURSO: Inteligencia Artificial y Agentes en .NET
 ========================================================================
+- Curso en Udemy: https://www.udemy.com/course/inteligencia-artificial-y-agentes-en-net/
+- Repositorio GitHub de referencia: https://github.com/gavilanch/Inteligencia-Artificial-y-Agentes-en-.NET
 
 Este repositorio contiene varios proyectos de chatbot en .NET. A continuación,
 se indican las configuraciones necesarias para su ejecución local.
