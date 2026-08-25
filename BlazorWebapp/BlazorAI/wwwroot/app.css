@@ -1,3 +1,14 @@
+html, body {
+    height: 100%;
+}
+
+body {
+    margin: 0;
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+    background-color: #eef1f6;
+    color: #1f2430;
+}
+
 h1:focus {
     outline: none;
 }
