@@ -1,0 +1,64 @@
+# ==========================================
+# Solution-level .gitignore (Chatbot003)
+# ==========================================
+
+# --- Secrets & Sensitive Files ---
+.env
+.env.*
+*.env
+*.env.*
+secrets.json
+usersecrets.json
+*.pem
+*.key
+*.pfx
+*.p12
+*.cer
+*.cert
+*.crt
+*.der
+
+# --- OS-specific files ---
+.DS_Store
+.DS_Store?
+._*
+
+# --- C# / .NET Build Artifacts ---
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+publish/
+sgen/
+decrypted/
+TestResults/
+
+# --- IDE and Editor Settings ---
+.vs/
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
+.idea/
+*.sln.iml
+*.idea.info
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.history/
+
+# --- Package / Dependency Managers ---
+*.nuget.props
+*.nuget.targets
+project.lock.json
+project.fragment.lock.json
+
+# --- General System / Backup files ---
+*.bak
+*.tmp
+*.temp
+*.log
+*.swp
+*~
