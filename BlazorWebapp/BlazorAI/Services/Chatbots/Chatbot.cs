@@ -1,22 +1,26 @@
 using BlazorAI.Dto;
+using BlazorAI.Helpers;
 using Microsoft.Extensions.AI;
 
 namespace BlazorAI.Services.Chatbots;
 
 public class Chatbot : IChatbot
 {
-    private readonly IChatClient client;
+    private string model;
+    private readonly IChatClientFactory client;
     private readonly ChatOptions chatOptions;
     private readonly List<ChatMessage> messages = [];
     private readonly Queue<ToolApprovalRequestContent> approvalPending = new();
+    private CancellationTokenSource _ctsCurrent;
 
     public List<MessageChatUI> Conversation { get; } = [];
     public bool IsProcessing { get; private set; }
     public RequestApprovalUI RequestApprovalPending { get; private set; }
     public event Action? OnChange;
 
-    public Chatbot(IChatClient client, ChatOptions chatOptions)
+    public Chatbot(IChatClientFactory client, ChatOptions chatOptions)
     {
+        model = ModelsAI.GetModelDefault;
         this.client = client;
         this.chatOptions = chatOptions;
 
@@ -33,6 +37,10 @@ public class Chatbot : IChatbot
 
     public void CancelCurrentResponse()
     {
+        if (IsProcessing)
+        {
+            _ctsCurrent?.Cancel();
+        }
     }
 
     public async Task ResolveApprovalAsync(bool approved, CancellationToken cancellationToken = default)
@@ -43,35 +51,47 @@ public class Chatbot : IChatbot
         }
 
         IsProcessing = true;
-        var approvalResponse = RequestApprovalPending.ToolApprovalRequest.CreateResponse(approved);
-        messages.Add(new ChatMessage(ChatRole.User, [approvalResponse]));
-        RequestApprovalPending = null;
+        _ctsCurrent = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-        Conversation.Add(new MessageChatUI
+        try
         {
-            Role = MessageRole.System,
-            Text = approved ? "Acción aprobada por el usuario" : "Acción rechazada por el usuario"
-        });
+            var approvalResponse = RequestApprovalPending.ToolApprovalRequest.CreateResponse(approved);
+            messages.Add(new ChatMessage(ChatRole.User, [approvalResponse]));
+            RequestApprovalPending = null;
 
-        RequestApprovalPending = null;
-        ShowNextApprovalPending();
+            Conversation.Add(new MessageChatUI
+            {
+                Role = MessageRole.System,
+                Text = approved ? "Acción aprobada por el usuario" : "Acción rechazada por el usuario"
+            });
 
-        if (RequestApprovalPending is not null)
-        {
-            IsProcessing = false;
+            RequestApprovalPending = null;
+            ShowNextApprovalPending();
+
+            if (RequestApprovalPending is not null)
+            {
+                IsProcessing = false;
+                ChangeNotification();
+                return;
+            }
+
+            Conversation.Add(new MessageChatUI
+            {
+                Role = MessageRole.AI,
+                Text = string.Empty
+            });
+
             ChangeNotification();
-            return;
+            await ProcessResponse(_ctsCurrent.Token);
         }
-
-        Conversation.Add(new MessageChatUI
+        catch(OperationCanceledException)
         {
-            Role = MessageRole.AI,
-            Text = string.Empty
-        });
-
-        ChangeNotification();
-        await ProcessResponse(cancellationToken);
-        IsProcessing = false;
+            OperationCanceled();
+        }
+        finally
+        {
+            OperationFinally();
+        }
     }
 
     public async Task SendMessageAsync(string userText, CancellationToken cancellationToken = default)
@@ -86,25 +106,59 @@ public class Chatbot : IChatbot
             return;
         }
 
-        IsProcessing = true;
-
-        Conversation.Add(new MessageChatUI
+        try
         {
-           Role = MessageRole.User,
-           Text = userText 
-        });
+            IsProcessing = true;
+            _ctsCurrent = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-        messages.Add(new ChatMessage(ChatRole.User, userText));
+            Conversation.Add(new MessageChatUI
+            {
+            Role = MessageRole.User,
+            Text = userText 
+            });
 
-        Conversation.Add(new MessageChatUI
+            messages.Add(new ChatMessage(ChatRole.User, userText));
+
+            Conversation.Add(new MessageChatUI
+            {
+            Role = MessageRole.AI,
+            Text = string.Empty 
+            });
+
+            ChangeNotification();
+            await ProcessResponse(_ctsCurrent.Token);
+        }
+        catch (OperationCanceledException)
         {
-           Role = MessageRole.AI,
-           Text = string.Empty 
-        });
+            OperationCanceled();
+        }
+        finally
+        {
+            OperationFinally();
+        }
+    }
 
-        ChangeNotification();
-        await ProcessResponse(cancellationToken);
+    private void OperationCanceled()
+    {
+        if (Conversation is not null && Conversation.Count > 0 && Conversation[^1].Role == MessageRole.AI)
+        {
+            if (string.IsNullOrWhiteSpace(Conversation[^1].Text))
+            {
+                Conversation[^1].Text = "[Respuesta cancelada]";
+            }
+            else
+            {
+                Conversation[^1].Text = "[cancelado]";
+            }
+        }
+    }
+
+    private void OperationFinally()
+    {
+        _ctsCurrent?.Dispose();
+        _ctsCurrent = null;
         IsProcessing = false;
+        ChangeNotification();
     }
 
     private async Task ProcessResponse(CancellationToken cancellationToken)
@@ -112,7 +166,9 @@ public class Chatbot : IChatbot
         var updates = new List<ChatResponseUpdate>();
         var functionResults = new List<string>();
 
-        await foreach(var update in client.GetStreamingResponseAsync(messages, chatOptions, cancellationToken: cancellationToken))
+        var mClient = client.Create(model);
+
+        await foreach(var update in mClient.GetStreamingResponseAsync(messages, chatOptions, cancellationToken: cancellationToken))
         {
             updates.Add(update);
 
@@ -200,5 +256,10 @@ public class Chatbot : IChatbot
             "SendEmailAsync" => "Enviar correo",
             _ => name
         };
+    }
+
+    public void SetModel(string model)
+    {
+        this.model = model;
     }
 }

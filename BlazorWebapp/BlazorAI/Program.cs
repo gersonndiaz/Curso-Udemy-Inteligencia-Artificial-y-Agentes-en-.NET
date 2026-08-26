@@ -24,40 +24,43 @@ builder.Services.AddTransient<EvaluateConditions>();
 builder.Services.AddTransient<EmailService>();
 builder.Services.AddHttpClient();
 
-var provider = "ollama";
-var model = "qwen3.5:9b";
+builder.Services.AddTransient<IChatClientFactory, ChatClientFactory>();
 
-builder.Services.AddSingleton<IChatClient>(sp =>
-{
-    var configuration = sp.GetRequiredService<IConfiguration>();
-    var ollamaUrl = configuration["AI:OllamaUrl"] ?? "http://localhost:11434";
-    var keyOpenAI = configuration.GetValue<string>("OPENAI_KEY");
-    // var provider = configuration["AI:Provider"]?.Trim().ToLowerInvariant() ?? "ollama";
-    // var model = configuration["AI:Model"] ?? "qwen3.5:9b";
+// Movido a ChatClientFactory.cs
+// var provider = "ollama";
+// var model = "qwen3.5:9b";
 
-    var cliente = provider switch
-    {
-        "ollama" => new OllamaApiClient(new Uri(ollamaUrl), model),
-        "openai" => new OpenAI.Chat.ChatClient(model, keyOpenAI).AsIChatClient(),
-        // "claude" => new AnthropicClient()
-        // {
-        //     ApiKey = llaveAnthropic
-        // }.AsIChatClient().AsBuilder().ConfigureOptions(c => c.ModelId = modelo ?? "claude-haiku-4-5").Build(),
-        _ => throw new ArgumentException($"Proveedor desconocido: {provider}")
-    };
+// builder.Services.AddSingleton<IChatClient>(sp =>
+// {
+//     var configuration = sp.GetRequiredService<IConfiguration>();
+//     var ollamaUrl = configuration["AI:OllamaUrl"] ?? "http://localhost:11434";
+//     var keyOpenAI = configuration.GetValue<string>("OPENAI_KEY");
+//     // var provider = configuration["AI:Provider"]?.Trim().ToLowerInvariant() ?? "ollama";
+//     // var model = configuration["AI:Model"] ?? "qwen3.5:9b";
 
-    return cliente.AsBuilder()
-    .UseFunctionInvocation(null, c =>
-    {
-        c.IncludeDetailedErrors = true;
-    })
-    .Build(sp);
-});
+//     var cliente = provider switch
+//     {
+//         "ollama" => new OllamaApiClient(new Uri(ollamaUrl), model),
+//         "openai" => new OpenAI.Chat.ChatClient(model, keyOpenAI).AsIChatClient(),
+//         // "claude" => new AnthropicClient()
+//         // {
+//         //     ApiKey = llaveAnthropic
+//         // }.AsIChatClient().AsBuilder().ConfigureOptions(c => c.ModelId = modelo ?? "claude-haiku-4-5").Build(),
+//         _ => throw new ArgumentException($"Proveedor desconocido: {provider}")
+//     };
+
+//     return cliente.AsBuilder()
+//     .UseFunctionInvocation(null, c =>
+//     {
+//         c.IncludeDetailedErrors = true;
+//     })
+//     .Build(sp);
+// });
 
 builder.Services.AddTransient<ChatOptions>(sp => new ChatOptions
 {
     Tools = [.. Tools.GetTools(sp)],
-    ModelId = model,
+    // ModelId = model,
     Temperature = 0.7f,
     MaxOutputTokens = 2000
 });

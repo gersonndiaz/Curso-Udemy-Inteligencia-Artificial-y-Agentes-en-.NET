@@ -1,9 +1,11 @@
 @page "/"
 @using BlazorAI.Dto
+@using BlazorAI.Helpers
 @using BlazorAI.Services.Chatbots
 @implements IDisposable
 @inject IChatbot ChatSession
 @inject IJSRuntime JS
+@inject IConfiguration Configuration
 
 <div class="chat-wrapper">
     <h3 class="chat-header">Chat</h3>
@@ -54,8 +56,19 @@
     </div>
 
     <EditForm Model="model" OnValidSubmit="Submit">
-        <div></div>
         <div class="input-chat">
+
+            <select class="form-select model-selector"
+                @bind="selectedModel"
+                @bind:after="OnModelChanged"
+                disabled="@(ChatSession.IsProcessing || ChatSession.RequestApprovalPending is not null)">
+
+                @foreach(var item in modelsAvailable)
+                {
+                    <option value="@item">@item</option>
+                }
+            </select>
+
             <input class="form-control"
                 @bind="model.Text"
                 @bind:event="oninput"
@@ -83,10 +96,34 @@
             || ChatSession.RequestApprovalPending is not null
             || string.IsNullOrWhiteSpace(model.Text);
 
+    private readonly List<string> modelsAvailable = ModelsAI.GetModelsAvailables().ToList();
+    private string selectedModel = ModelsAI.GetModelDefault;
+
+    private void OnModelChanged()
+    {
+        ChatSession.SetModel(selectedModel);
+    }
+
     protected override void OnInitialized()
     {
         base.OnInitialized();
         ChatSession.OnChange += ManageChangeChat;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var ollamaUrl = Configuration["AI:OllamaUrl"] ?? "http://localhost:11434";
+            await ModelsAI.LoadOllamaModelsAsync(ollamaUrl);
+
+            modelsAvailable.Clear();
+            modelsAvailable.AddRange(ModelsAI.GetModelsAvailables());
+        }
+        catch (HttpRequestException)
+        {
+            // Ollama no disponible: se mantienen los modelos predefinidos.
+        }
     }
 
     private void ManageChangeChat()

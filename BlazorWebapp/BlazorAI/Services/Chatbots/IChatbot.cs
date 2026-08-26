@@ -10,6 +10,7 @@ public interface IChatbot
 
     event Action? OnChange;
 
+    void SetModel(string model);
     void CancelCurrentResponse();
     Task SendMessageAsync(string userText, CancellationToken cancellationToken = default);
     Task ResolveApprovalAsync(bool approved, CancellationToken cancellationToken = default);
