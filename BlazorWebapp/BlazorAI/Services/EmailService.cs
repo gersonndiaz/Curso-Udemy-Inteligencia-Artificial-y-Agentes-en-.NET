@@ -12,7 +12,7 @@ public class EmailService
     }
 
     [Description("Envía un correo electrónico a un destinatario específico.")]
-    public Task SendEmailAsync(
+    public Task<string> SendEmailAsync(
             [Description("La dirección de correo del destinatario.")] string to
             , [Description("El asunto del correo.")] string subject
             , [Description("El cuerpo del correo.")] string body)
@@ -32,6 +32,6 @@ public class EmailService
         Console.WriteLine($"Enviando correo a: {to}");
         Console.WriteLine($"Asunto: {subject}");
         Console.WriteLine($"Cuerpo: {body}");
-        return Task.CompletedTask;
+        return Task.FromResult($"Correo enviado correctamente a {to}.");
     }
 }

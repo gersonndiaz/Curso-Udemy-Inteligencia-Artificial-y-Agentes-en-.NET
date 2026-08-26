@@ -6,6 +6,7 @@ public interface IChatbot
 {
     List<MessageChatUI> Conversation { get; }
     bool IsProcessing { get; }
+    RequestApprovalUI RequestApprovalPending { get; }
 
     event Action? OnChange;
 

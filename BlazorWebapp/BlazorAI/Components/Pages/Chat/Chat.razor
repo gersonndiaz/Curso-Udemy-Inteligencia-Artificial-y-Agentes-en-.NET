@@ -11,9 +11,44 @@
     <div class="chat-messages" @ref="MessageContainer">
         @foreach(var message in ChatSession.Conversation)
         {
-            <div class="message @GetClassCSS(message.Role)">
-                <div class="message-header">@GetLabel(message.Role)</div>
-                <div class="message-body">@message.Text</div>
+            @if (!string.IsNullOrWhiteSpace(message.Text))
+            {
+                <div class="message @GetClassCSS(message.Role)">
+                    <div class="message-header">@GetLabel(message.Role)</div>
+                    <div class="message-body">@message.Text</div>
+                </div>
+            }
+        }
+
+        @if (ChatSession.RequestApprovalPending is not null)
+        {
+            <div class="aprobacion-tool">
+                <h4>La IA desea ejecutar una acción sensible</h4>
+                <p><strong>Tool:</strong> @ChatSession.RequestApprovalPending.ToolName</p>
+
+                @if (ChatSession.RequestApprovalPending.Arguments.Count > 0)
+                {
+                    <ul>
+                        @foreach (var argumento in ChatSession.RequestApprovalPending.Arguments)
+                        {
+                            <li><strong>@argumento.Key:</strong> @argumento.Value</li>
+                        }
+                    </ul>
+                }
+
+                <div class="acciones-aprobacion">
+                    <button class="btn btn-success"
+                            @onclick="Approve"
+                            disabled="@ChatSession.IsProcessing">
+                        Aprobar
+                    </button>
+
+                    <button class="btn btn-danger"
+                            @onclick="Decline"
+                            disabled="@ChatSession.IsProcessing">
+                        Rechazar
+                    </button>
+                </div>
             </div>
         }
     </div>
@@ -44,7 +79,9 @@
     private ElementReference MessageContainer;
     private bool scrollRequired;
 
-    private bool SubmitDisable => ChatSession.IsProcessing || string.IsNullOrWhiteSpace(model.Text);
+    private bool SubmitDisable => ChatSession.IsProcessing 
+            || ChatSession.RequestApprovalPending is not null
+            || string.IsNullOrWhiteSpace(model.Text);
 
     protected override void OnInitialized()
     {
@@ -56,6 +93,18 @@
     {
         scrollRequired = true;
         InvokeAsync(StateHasChanged);
+    }
+
+    private async Task Approve()
+    {
+        scrollRequired = true;
+        await ChatSession.ResolveApprovalAsync(true);
+    }
+
+    private async Task Decline()
+    {
+        scrollRequired = true;
+        await ChatSession.ResolveApprovalAsync(false);
     }
 
     private async Task Submit()

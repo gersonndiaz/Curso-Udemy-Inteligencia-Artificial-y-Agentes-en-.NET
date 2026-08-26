@@ -1,5 +1,7 @@
 using BlazorAI.Components;
+using BlazorAI.Services;
 using BlazorAI.Services.Chatbots;
+using BlazorAI.Tools;
 using Microsoft.Extensions.AI;
 using OllamaSharp;
 
@@ -8,6 +10,11 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+builder.Services.AddTransient<IWeatherService, WeatherService>();
+builder.Services.AddTransient<EvaluateConditions>();
+builder.Services.AddTransient<EmailService>();
+builder.Services.AddHttpClient();
 
 builder.Services.AddScoped<IChatbot, Chatbot>();
 
@@ -35,7 +42,7 @@ builder.Services.AddSingleton<IChatClient>(sp =>
     {
         o.MaxOutputTokens = 2000;
         o.Temperature = 0.7f;
-        //o.Tools =[.. Tools.Tools.GetTools(sp)];
+        o.Tools =[.. Tools.GetTools(sp)];
     })
     .UseFunctionInvocation(null, c =>
     {
