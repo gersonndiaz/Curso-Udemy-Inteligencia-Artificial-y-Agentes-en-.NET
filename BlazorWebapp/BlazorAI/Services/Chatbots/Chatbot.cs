@@ -6,22 +6,26 @@ namespace BlazorAI.Services.Chatbots;
 public class Chatbot : IChatbot
 {
     private readonly IChatClient client;
+    private readonly ChatOptions chatOptions;
     private readonly List<ChatMessage> messages = [];
+    private readonly Queue<ToolApprovalRequestContent> approvalPending = new();
 
     public List<MessageChatUI> Conversation { get; } = [];
     public bool IsProcessing { get; private set; }
     public RequestApprovalUI RequestApprovalPending { get; private set; }
     public event Action? OnChange;
 
-    public Chatbot(IChatClient client)
+    public Chatbot(IChatClient client, ChatOptions chatOptions)
     {
         this.client = client;
+        this.chatOptions = chatOptions;
 
         string systemPrompt = """
                     Eres un asistente de inteligencia artificial llamado "Agente Ollama". Tu tarea es ayudar a los usuarios a responder preguntas y proporcionar información útil.
                     Debes responder en Español
                     Las respuestas deben ser claras, concisas y fáciles de entender. Evita dar respuestas vagas o ambiguas.
-                    Las respuestas deben ser en texto plano, no usar formatos como markdown.
+                    Las respuestas deben ser en texto plano, no usar formatos como markdown. Excepto si es explicitamente solicitada por el usuario, aunque se debe vigilar y bloquear posible código malicioso, sospechoso o mal intencionado.
+                    La información mmostrada debe ser entendible por la persona y se deben excluir ID de alguna base de datos o identificadores de base de datos. Se puede mostrar formatos como json solo para casos solicitados, considerando que el usuario puede o no ser desarrollador.
                 """ ;
 
         messages.Add(new ChatMessage(ChatRole.System, systemPrompt));
@@ -48,6 +52,16 @@ public class Chatbot : IChatbot
             Role = MessageRole.System,
             Text = approved ? "Acción aprobada por el usuario" : "Acción rechazada por el usuario"
         });
+
+        RequestApprovalPending = null;
+        ShowNextApprovalPending();
+
+        if (RequestApprovalPending is not null)
+        {
+            IsProcessing = false;
+            ChangeNotification();
+            return;
+        }
 
         Conversation.Add(new MessageChatUI
         {
@@ -98,7 +112,7 @@ public class Chatbot : IChatbot
         var updates = new List<ChatResponseUpdate>();
         var functionResults = new List<string>();
 
-        await foreach(var update in client.GetStreamingResponseAsync(messages, cancellationToken: cancellationToken))
+        await foreach(var update in client.GetStreamingResponseAsync(messages, chatOptions, cancellationToken: cancellationToken))
         {
             updates.Add(update);
 
@@ -120,32 +134,27 @@ public class Chatbot : IChatbot
         var response = updates.ToChatResponse();
         messages.AddMessages(response);
 
-        foreach (var functionResult in functionResults)
-        {
-            Conversation.Add(new MessageChatUI
-            {
-                Role = MessageRole.System,
-                Text = functionResult
-            });
-        }
+        // foreach (var functionResult in functionResults)
+        // {
+        //     Conversation.Add(new MessageChatUI
+        //     {
+        //         Role = MessageRole.System,
+        //         Text = functionResult
+        //     });
+        // }
 
         if (functionResults.Count > 0)
         {
             ChangeNotification();
         }
 
-        var approvalRequest = response.Messages.SelectMany(m => m.Contents).OfType<ToolApprovalRequestContent>().FirstOrDefault();
+        var approvalRequests = response.Messages.SelectMany(m => m.Contents).OfType<ToolApprovalRequestContent>().ToList();
 
-        if (approvalRequest is not null)
+        if (approvalRequests is not null && approvalRequests.Count > 0)
         {
-            if (approvalRequest.ToolCall is FunctionCallContent functionCall)
+            foreach(var request in approvalRequests)
             {
-                RequestApprovalPending = new RequestApprovalUI
-                {
-                    ToolApprovalRequest = approvalRequest,
-                    ToolName = ConvertFunctionName(functionCall.Name),
-                    Arguments = functionCall.Arguments?.ToDictionary(x => x.Key, x => x.Value) ?? []
-                };
+                approvalPending.Enqueue(request);
             }
             
             // Removemos mensaje vacio de la IA
@@ -154,8 +163,31 @@ public class Chatbot : IChatbot
                 Conversation.RemoveAt(Conversation.Count - 1);
             }
 
+            ShowNextApprovalPending();
+
             ChangeNotification();
             return;
+        }
+    }
+
+    private void ShowNextApprovalPending()
+    {
+        if (approvalPending is not null && approvalPending.Count == 0)
+        {
+            RequestApprovalPending = null;
+            return;
+        }
+
+        var approvalRequest = approvalPending.Dequeue();
+
+        if (approvalRequest.ToolCall is FunctionCallContent functionCall)
+        {
+            RequestApprovalPending = new RequestApprovalUI
+            {
+                ToolApprovalRequest = approvalRequest,
+                ToolName = ConvertFunctionName(functionCall.Name),
+                Arguments = functionCall.Arguments?.ToDictionary(x => x.Key, x => x.Value) ?? []
+            };
         }
     }
 

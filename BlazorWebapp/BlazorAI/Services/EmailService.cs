@@ -29,9 +29,9 @@ public class EmailService
         }
         
         // Simulación de envío de correo electrónico
-        Console.WriteLine($"Enviando correo a: {to}");
-        Console.WriteLine($"Asunto: {subject}");
-        Console.WriteLine($"Cuerpo: {body}");
+        // Console.WriteLine($"Enviando correo a: {to}");
+        // Console.WriteLine($"Asunto: {subject}");
+        // Console.WriteLine($"Cuerpo: {body}");
         return Task.FromResult($"Correo enviado correctamente a {to}.");
     }
 }

@@ -34,5 +34,8 @@ public static class Tools
 
         var functionEmailSender = AIFunctionFactory.Create(emailService.SendEmailAsync);
         yield return new ApprovalRequiredAIFunction(functionEmailSender);
+
+        var personService = sp.GetRequiredService<IPersonService>();
+        yield return AIFunctionFactory.Create(personService.GetAll);
     }
 }

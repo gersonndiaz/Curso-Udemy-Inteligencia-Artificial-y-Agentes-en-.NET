@@ -1,7 +1,9 @@
 using BlazorAI.Components;
+using BlazorAI.Domain.Context;
 using BlazorAI.Services;
 using BlazorAI.Services.Chatbots;
 using BlazorAI.Tools;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
 using OllamaSharp;
 
@@ -11,20 +13,27 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+builder.Services.AddDbContextFactory<AppDbContext>(options =>
+    options.UseSqlite("Data Source=mydb.db"));
+
+builder.Services.AddScoped<IPersonService, PersonService>();
+builder.Services.AddScoped<IChatbot, Chatbot>();
+
 builder.Services.AddTransient<IWeatherService, WeatherService>();
 builder.Services.AddTransient<EvaluateConditions>();
 builder.Services.AddTransient<EmailService>();
 builder.Services.AddHttpClient();
 
-builder.Services.AddScoped<IChatbot, Chatbot>();
+var provider = "ollama";
+var model = "qwen3.5:9b";
 
 builder.Services.AddSingleton<IChatClient>(sp =>
 {
     var configuration = sp.GetRequiredService<IConfiguration>();
-    var provider = configuration["AI:Provider"]?.Trim().ToLowerInvariant() ?? "ollama";
-    var model = configuration["AI:Model"] ?? "qwen3.5:9b";
     var ollamaUrl = configuration["AI:OllamaUrl"] ?? "http://localhost:11434";
     var keyOpenAI = configuration.GetValue<string>("OPENAI_KEY");
+    // var provider = configuration["AI:Provider"]?.Trim().ToLowerInvariant() ?? "ollama";
+    // var model = configuration["AI:Model"] ?? "qwen3.5:9b";
 
     var cliente = provider switch
     {
@@ -38,32 +47,19 @@ builder.Services.AddSingleton<IChatClient>(sp =>
     };
 
     return cliente.AsBuilder()
-    .ConfigureOptions(o =>
-    {
-        o.MaxOutputTokens = 2000;
-        o.Temperature = 0.7f;
-        o.Tools =[.. Tools.GetTools(sp)];
-    })
     .UseFunctionInvocation(null, c =>
     {
         c.IncludeDetailedErrors = true;
     })
-    .Use(async (mensajes, opciones, next, cancellationToken) =>
-    {
-        //    Console.WriteLine();
-        //    Console.ForegroundColor = ConsoleColor.Green;
-        //    Console.WriteLine("Antes de llamar al modelo...");
-        //    Console.ResetColor();
-
-        await next(mensajes, opciones, cancellationToken);
-
-        //    Console.WriteLine();
-        //    Console.ForegroundColor = ConsoleColor.Green;
-        //    Console.WriteLine("Después de llamar al modelo...");
-        //    Console.ResetColor();
-
-    })
     .Build(sp);
+});
+
+builder.Services.AddTransient<ChatOptions>(sp => new ChatOptions
+{
+    Tools = [.. Tools.GetTools(sp)],
+    ModelId = model,
+    Temperature = 0.7f,
+    MaxOutputTokens = 2000
 });
 
 var app = builder.Build();
