@@ -1,11 +1,102 @@
 .page-shell {
     min-height: 100vh;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    padding: 2rem 1rem;
+    gap: 1.25rem;
+    padding: 1rem;
     background: linear-gradient(135deg, #eef2ff 0%, #eef1f6 45%, #eaf5f1 100%);
     box-sizing: border-box;
+}
+
+.top-row {
+    width: min(100%, 860px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-top: 0.35rem;
+    padding-bottom: 0.35rem;
+}
+
+.brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #1e293b;
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    text-decoration: none;
+}
+
+.brand-mark {
+    display: inline-grid;
+    width: 2rem;
+    height: 2rem;
+    place-items: center;
+    border-radius: 0.7rem;
+    color: #ffffff;
+    background: linear-gradient(135deg, #4f46e5, #6366f1);
+    box-shadow: 0 5px 12px rgba(79, 70, 229, 0.25);
+}
+
+.chat-navigation {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.3rem;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 0.85rem;
+    background: rgba(255, 255, 255, 0.68);
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+    backdrop-filter: blur(10px);
+}
+
+.nav-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.58rem 0.8rem;
+    border-radius: 0.6rem;
+    color: #64748b;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+}
+
+.nav-button:hover {
+    color: #4338ca;
+    background: #eef2ff;
+    transform: translateY(-1px);
+}
+
+.nav-button.active {
+    color: #ffffff;
+    background: linear-gradient(135deg, #4f46e5, #6366f1);
+    box-shadow: 0 4px 10px rgba(79, 70, 229, 0.22);
+}
+
+@media (max-width: 540px) {
+    .top-row {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .brand {
+        align-self: center;
+    }
+
+    .chat-navigation {
+        justify-content: center;
+    }
+
+    .nav-button {
+        flex: 1;
+        justify-content: center;
+        padding-inline: 0.55rem;
+    }
 }
 
 #blazor-error-ui {

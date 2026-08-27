@@ -1,6 +1,24 @@
 ﻿@inherits LayoutComponentBase
 
 <div class="page-shell">
+    <header class="top-row px-4">
+        <a class="brand" href="/" aria-label="Ir al inicio">
+            <span class="brand-mark" aria-hidden="true">✦</span>
+            <span>Blazor AI</span>
+        </a>
+
+        <nav class="chat-navigation" aria-label="Tipos de chat">
+            <NavLink class="nav-button" href="/" Match="NavLinkMatch.All">
+                <span aria-hidden="true">💬</span>
+                Chat General
+            </NavLink>
+            <NavLink class="nav-button" href="/chat-rag">
+                <span aria-hidden="true">📚</span>
+                Chat RAG
+            </NavLink>
+        </nav>
+    </header>
+
     @Body
 </div>
 

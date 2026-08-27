@@ -1,4 +1,4 @@
-@page "/"
+@page "/chat-rag"
 @using BlazorAI.Dto
 @using BlazorAI.Helpers
 @using BlazorAI.Services.Chatbots
@@ -7,18 +7,31 @@
 @inject IConfiguration Configuration
 
 <div class="chat-wrapper">
-    <h3 class="chat-header">Chat</h3>
+    <h3 class="chat-header">Chat Documentos Internos</h3>
 
     <div class="chat-messages" @ref="MessageContainer">
         @foreach(var message in ChatSession.Conversation)
         {
-            @if (!string.IsNullOrWhiteSpace(message.Text))
-            {
-                <div class="message @GetClassCSS(message.Role)">
-                    <div class="message-header">@GetLabel(message.Role)</div>
-                    <div class="message-body">@message.Text</div>
+            <div class="message @GetClassCSS(message.Role)">
+                <div class="message-header">@GetLabel(message.Role)</div>
+                <div class="message-body">
+                    @if (string.IsNullOrEmpty(message.Text))
+                    {
+                        <div class="typing-indicator">
+                            <div class="typing-dots" aria-label="La IA está escribiendo" role="status">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </div>
+                        </div>
+
+                    }
+                    else
+                    {
+                        @message.Text
+                    }
                 </div>
-            }
+            </div>
         }
 
         @if (ChatSession.RequestApprovalPending is not null)
@@ -87,7 +100,7 @@
 </div>
 
 @code {
-    [Inject(Key = "chat")]
+    [Inject(Key = "chat-rag")]
     public IChatbot ChatSession { get; set; } = null!;
 
 

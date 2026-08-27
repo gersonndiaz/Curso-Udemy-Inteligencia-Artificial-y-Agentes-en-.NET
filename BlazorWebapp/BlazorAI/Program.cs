@@ -1,8 +1,11 @@
 using BlazorAI.Components;
 using BlazorAI.Domain.Context;
+using BlazorAI.RAG.Chatbots;
+using BlazorAI.RAG.Services;
 using BlazorAI.Services;
 using BlazorAI.Services.Chatbots;
 using BlazorAI.Tools;
+using CommunityToolkit.VectorData.InMemory;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
 using OllamaSharp;
@@ -17,7 +20,40 @@ builder.Services.AddDbContextFactory<AppDbContext>(options =>
     options.UseSqlite("Data Source=mydb.db"));
 
 builder.Services.AddScoped<IPersonService, PersonService>();
-builder.Services.AddScoped<IChatbot, Chatbot>();
+// builder.Services.AddScoped<IChatbot, Chatbot>();
+builder.Services.AddKeyedScoped<IChatbot, Chatbot>("chat");
+builder.Services.AddKeyedScoped<IChatbot, ChatbotRag>("chat-rag");
+
+builder.Services.AddSingleton<DocumentsInMemoryService>();
+builder.Services.AddSingleton<IRagService, RagMemoryService>();
+builder.Services.AddSingleton<InMemoryVectorStore>();
+
+// Version OpenAI
+// builder.Services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(sp =>
+// {
+//     var configuration = sp.GetRequiredService<IConfiguration>();
+//     var apiKey = configuration["OPENAI_LLAVE"]!;
+//     var modeloEmbeddings = configuration["MODELO_GENERA_EMBEDDINGS"];
+
+//     var cliente = new EmbeddingClient(modeloEmbeddings, apiKey);
+//     return cliente.AsIEmbeddingGenerator();
+// });
+
+// Version Ollama
+builder.Services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(sp =>
+{
+    var configuration = sp.GetRequiredService<IConfiguration>();
+
+    var ollamaUrl =
+        configuration["AI:OllamaUrl"] ?? "http://localhost:11434";
+
+    var embeddingsModel =
+        configuration["AI:EmbeddingModel"] ?? "nomic-embed-text:latest";
+
+    return new OllamaApiClient(
+        new Uri(ollamaUrl),
+        embeddingsModel);
+});
 
 builder.Services.AddTransient<IWeatherService, WeatherService>();
 builder.Services.AddTransient<EvaluateConditions>();
